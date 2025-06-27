@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LoginPage } from '../components/auth/LoginPage';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
@@ -9,28 +8,27 @@ import { SupervisorDashboard } from '../components/dashboards/SupervisorDashboar
 import { FuemanDashboard } from '../components/dashboards/FuemanDashboard';
 import { GLPAMADashboard } from '../components/dashboards/GLPAMADashboard';
 import { AdminDashboard } from '../components/dashboards/AdminDashboard';
-import { TransportDetails } from '../components/transport/TransportDetails';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-slate-50">
+  const location = useLocation();
+  
+  // If we're on the login path, show login page
+  if (location.pathname === '/login') {
+    return (
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          
-          <Route path="/" element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<RoleDashboard />} />
-            <Route path="transport/:id" element={<TransportDetails />} />
-          </Route>
-        </Routes>
+        <LoginPage />
       </AuthProvider>
-    </div>
+    );
+  }
+
+  // Otherwise show the protected dashboard
+  return (
+    <AuthProvider>
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    </AuthProvider>
   );
 };
 
@@ -54,4 +52,5 @@ const RoleDashboard = () => {
   }
 };
 
+export { RoleDashboard };
 export default Index;
