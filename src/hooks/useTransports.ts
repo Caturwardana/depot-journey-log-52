@@ -26,9 +26,11 @@ export const useTransport = (id: string) => {
 
 export const useCreateTransport = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (transportData: any) => ApiService.createTransport(transportData),
+    mutationFn: async (transportData: any) => {
+      return await ApiService.createTransport(transportData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transports'] });
       toast({
@@ -36,33 +38,59 @@ export const useCreateTransport = () => {
         description: "Transport created successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create transport",
+        description: "Failed to create transport",
+        variant: "destructive",
+      });
+      console.error('Create transport error:', error);
+    },
+  });
+};
+
+export const useUpdateTransport = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await ApiService.updateTransport(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transports'] });
+      toast({
+        title: "Success",
+        description: "Transport updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update transport",
         variant: "destructive",
       });
     },
   });
 };
 
-export const useUpdateTransportStatus = () => {
+export const useDeleteTransport = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => 
-      ApiService.updateTransportStatus(id, status),
+    mutationFn: async (id: string) => {
+      return await ApiService.deleteTransport(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transports'] });
       toast({
         title: "Success",
-        description: "Transport status updated successfully",
+        description: "Transport deleted successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update transport status",
+        description: "Failed to delete transport",
         variant: "destructive",
       });
     },

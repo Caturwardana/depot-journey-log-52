@@ -7,13 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import ApiService from '../../services/api';
 
 interface CreateTransportModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onTransportCreated?: () => void;
 }
 
-export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({ open, onOpenChange }) => {
+export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({ 
+  open, 
+  onOpenChange, 
+  onTransportCreated 
+}) => {
   const [formData, setFormData] = useState({
     unitNumber: '',
     driverName: '',
@@ -21,22 +27,47 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({ open
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const transportData = {
+        ...formData,
+        status: 'loading',
+        startTime: new Date().toISOString(),
+        location: location ? `${location.lat},${location.lng}` : null
+      };
 
-    toast({
-      title: "Transport Created",
-      description: `Transport ${formData.unitNumber} has been created successfully.`,
-    });
+      const response = await ApiService.createTransport(transportData);
+      
+      if (response.success) {
+        toast({
+          title: "Transport Created",
+          description: `Transport ${formData.unitNumber} has been created successfully.`,
+        });
 
-    setLoading(false);
-    onOpenChange(false);
-    setFormData({ unitNumber: '', driverName: '', destination: '', notes: '' });
+        onOpenChange(false);
+        setFormData({ unitNumber: '', driverName: '', destination: '', notes: '' });
+        setLocation(null);
+        
+        // Notify parent component to refresh data
+        if (onTransportCreated) {
+          onTransportCreated();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create transport. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Create transport error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -47,9 +78,14 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({ open
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setLocation(newLocation);
           toast({
             title: "Location Captured",
-            description: `Lat: ${position.coords.latitude.toFixed(6)}, Lng: ${position.coords.longitude.toFixed(6)}`,
+            description: `Lat: ${newLocation.lat.toFixed(6)}, Lng: ${newLocation.lng.toFixed(6)}`,
           });
         },
         (error) => {
@@ -121,7 +157,7 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({ open
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="outline" onClick={captureLocation}>
               <MapPin className="w-4 h-4 mr-2" />
-              GPS Location
+              {location ? 'Location Captured' : 'GPS Location'}
             </Button>
             <Button type="button" variant="outline">
               <Camera className="w-4 h-4 mr-2" />

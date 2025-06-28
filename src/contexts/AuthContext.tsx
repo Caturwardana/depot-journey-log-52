@@ -30,8 +30,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedToken = localStorage.getItem('token');
     
     if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
+      try {
+        setUser(JSON.parse(storedUser));
+        setToken(storedToken);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole');
+      }
     }
     setLoading(false);
   }, []);
@@ -43,20 +50,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await ApiService.login(username, password);
       
       if (response.success && response.data) {
-        setUser(response.data.user);
-        setToken(response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('userRole', response.data.user.role);
+        const { user: userData, token: authToken } = response.data;
+        
+        setUser(userData);
+        setToken(authToken);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', authToken);
+        localStorage.setItem('userRole', userData.role);
+        
         setLoading(false);
         return true;
+      } else {
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
+      setLoading(false);
+      return false;
     }
-    
-    setLoading(false);
-    return false;
   };
 
   const logout = () => {
