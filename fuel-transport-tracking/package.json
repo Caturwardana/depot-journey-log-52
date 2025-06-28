@@ -1,3 +1,30 @@
-   mkdir fuel-transport-tracking
-   cd fuel-transport-tracking
-   npm init -y
+
+{
+  "name": "fuel-transport-tracking-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Fuel Transport Tracking System",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "multer": "^1.4.5-lts.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "joi": "^17.11.0",
+    "uuid": "^9.0.1",
+    "sharp": "^0.32.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["fuel", "transport", "tracking", "api"],
+  "author": "Fuel Transport Team",
+  "license": "MIT"
+}

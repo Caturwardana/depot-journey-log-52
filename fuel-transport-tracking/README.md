@@ -1,177 +1,164 @@
-### Step 1: Set Up Your Environment
 
-1. **Install Node.js**: Make sure you have Node.js installed on your machine.
+# Fuel Transport Tracking Backend
 
-2. **Create a New Directory for Your Project**:
+A complete Express.js backend API for fuel transport tracking system with MySQL database integration.
+
+## Features
+
+- **User Management**: Authentication, role-based access (driver, supervisor, fuelman, glpama, admin)
+- **Transport Tracking**: Complete CRUD operations for fuel transport management
+- **File Upload**: Secure image upload with validation and storage
+- **Database Integration**: MySQL with connection pooling
+- **Input Validation**: Joi schema validation for all endpoints
+- **Security**: JWT authentication, password hashing with bcrypt
+- **Error Handling**: Comprehensive error handling and logging
+
+## Prerequisites
+
+- Node.js (v14 or higher)
+- MySQL Server (v5.7 or higher)
+- npm or yarn package manager
+
+## Installation
+
+1. **Clone the repository**
    ```bash
-   mkdir fuel-transport-tracking
+   git clone <repository-url>
    cd fuel-transport-tracking
    ```
 
-3. **Initialize a New Node.js Project**:
+2. **Install dependencies**
    ```bash
-   npm init -y
+   npm install
    ```
 
-4. **Install Required Packages**:
+3. **Setup MySQL Database**
    ```bash
-   npm install express mysql2 body-parser dotenv
+   # Login to MySQL
+   mysql -u root -p
+   
+   # Run the schema file
+   source database/schema.sql
    ```
 
-### Step 2: Create the Project Structure
-
-Create the following files and directories:
-
-```
-fuel-transport-tracking/
-│
-├── .env
-├── app.js
-└── routes/
-    └── transport.js
-```
-
-### Step 3: Configure Environment Variables
-
-Create a `.env` file in the root directory to store your database connection details:
-
-```plaintext
-DB_HOST=localhost
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_NAME=fuel_transport_tracking
-```
-
-### Step 4: Set Up the Express Application
-
-In `app.js`, set up the Express server and connect to the MySQL database:
-
-```javascript
-// app.js
-const express = require('express');
-const bodyParser = require('body-parser');
-const mysql = require('mysql2');
-require('dotenv').config();
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// MySQL Connection
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-});
-
-// Connect to MySQL
-db.connect((err) => {
-    if (err) {
-        console.error('Database connection failed:', err.stack);
-        return;
-    }
-    console.log('Connected to database.');
-});
-
-// Routes
-app.use('/api/transport', require('./routes/transport')(db));
-
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
-```
-
-### Step 5: Create Routes for Transport Records
-
-In `routes/transport.js`, create routes to interact with the `transport_records` table:
-
-```javascript
-// routes/transport.js
-module.exports = (db) => {
-    const express = require('express');
-    const router = express.Router();
-
-    // Get all transport records
-    router.get('/', (req, res) => {
-        db.query('SELECT * FROM transport_records', (err, results) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            res.json(results);
-        });
-    });
-
-    // Get a specific transport record by ID
-    router.get('/:id', (req, res) => {
-        const { id } = req.params;
-        db.query('SELECT * FROM transport_records WHERE id = ?', [id], (err, results) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            if (results.length === 0) {
-                return res.status(404).json({ message: 'Transport record not found' });
-            }
-            res.json(results[0]);
-        });
-    });
-
-    // Create a new transport record
-    router.post('/', (req, res) => {
-        const newRecord = req.body;
-        db.query('INSERT INTO transport_records SET ?', newRecord, (err, results) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            res.status(201).json({ id: results.insertId, ...newRecord });
-        });
-    });
-
-    // Update a transport record
-    router.put('/:id', (req, res) => {
-        const { id } = req.params;
-        const updatedRecord = req.body;
-        db.query('UPDATE transport_records SET ? WHERE id = ?', [updatedRecord, id], (err, results) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            res.json({ message: 'Transport record updated successfully' });
-        });
-    });
-
-    // Delete a transport record
-    router.delete('/:id', (req, res) => {
-        const { id } = req.params;
-        db.query('DELETE FROM transport_records WHERE id = ?', [id], (err, results) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            res.json({ message: 'Transport record deleted successfully' });
-        });
-    });
-
-    return router;
-};
-```
-
-### Step 6: Run Your Application
-
-1. **Start the Server**:
-   ```bash
-   node app.js
+4. **Configure Environment Variables**
+   Copy `.env` file and update with your database credentials:
+   ```
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=your_password
+   DB_NAME=fuel_transport_tracking
+   DB_PORT=3306
+   PORT=3000
+   JWT_SECRET=your_jwt_secret_key_here
+   JWT_EXPIRES_IN=24h
    ```
 
-2. **Test the API**: You can use tools like Postman or curl to test the API endpoints. For example:
-   - GET all transport records: `GET http://localhost:3000/api/transport`
-   - GET a specific transport record: `GET http://localhost:3000/api/transport/1`
-   - POST a new transport record: `POST http://localhost:3000/api/transport` with JSON body.
-   - PUT to update a transport record: `PUT http://localhost:3000/api/transport/1` with JSON body.
-   - DELETE a transport record: `DELETE http://localhost:3000/api/transport/1`.
+5. **Start the Server**
+   ```bash
+   # Development mode
+   npm run dev
+   
+   # Production mode
+   npm start
+   ```
 
-### Conclusion
+## API Endpoints
 
-This is a basic setup for an Express.js application that connects to a MySQL database and provides RESTful API endpoints for managing transport records. You can expand this application by adding more routes, implementing authentication, and creating a frontend to interact with the API.
+### Authentication
+- `POST /api/users/login` - User login
+
+### Users
+- `GET /api/users` - Get all users
+- `GET /api/users/:id` - Get user by ID
+- `POST /api/users` - Create new user
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
+
+### Transports
+- `GET /api/transports` - Get all transports
+- `GET /api/transports/:id` - Get transport by ID
+- `POST /api/transports` - Create new transport
+- `PUT /api/transports/:id` - Update transport
+- `DELETE /api/transports/:id` - Delete transport
+- `PATCH /api/transports/:id/status` - Update transport status
+
+### Additional Routes
+- Depots: `/api/depots`
+- Terminals: `/api/terminals`
+- Checkpoints: `/api/checkpoints`
+- Documents: `/api/documents`
+- Flow Meters: `/api/flowmeter`
+- Fuel Quality: `/api/fuelquality`
+- Activity Logs: `/api/activitylogs`
+
+## Default Login Credentials
+
+All default users have password: `pass123`
+
+- **Driver**: username: `driver1`
+- **Supervisor**: username: `supervisor1`
+- **Fuelman**: username: `fuelman1`
+- **GL PAMA**: username: `glpama1`
+- **Admin**: username: `admin1`
+
+## Database Schema
+
+The database includes the following main tables:
+- `users` - User accounts and authentication
+- `transports` - Fuel transport records
+- `depots` - Fuel depot information
+- `terminals` - Terminal locations
+- `checkpoints` - Transport checkpoints
+- `documents` - File attachments
+- `flow_meters` - Flow meter readings
+- `fuel_quality` - Fuel quality tests
+- `activity_logs` - System activity logging
+
+## File Upload
+
+Images are stored in the `uploads/` directory with:
+- File type validation (jpg, png, jpeg, gif)
+- File size limits (5MB max)
+- Automatic file renaming to prevent conflicts
+- Image compression for optimization
+
+## Security Features
+
+- JWT token-based authentication
+- Password hashing with bcrypt
+- Input validation and sanitization
+- SQL injection prevention
+- CORS configuration
+- Error handling without sensitive data exposure
+
+## Testing
+
+Test the API endpoints using tools like Postman or curl:
+
+```bash
+# Login example
+curl -X POST http://localhost:3000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"driver1","password":"pass123"}'
+
+# Get transports example
+curl -X GET http://localhost:3000/api/transports \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## Frontend Integration
+
+This backend is designed to work with the React frontend application. Update the frontend API service configuration to point to `http://localhost:3000/api`.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details

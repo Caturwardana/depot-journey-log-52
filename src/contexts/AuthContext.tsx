@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import ApiService from '../services/api';
 
 interface User {
   id: string;
@@ -13,19 +14,24 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check for stored user session
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
+      setToken(storedToken);
     }
     setLoading(false);
   }, []);
@@ -33,24 +39,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setLoading(true);
     
-    // Mock authentication - in real app, this would call your API
-    const mockUsers = [
-      { id: '1', username: 'driver1', password: 'pass123', fullname: 'John Driver', role: 'driver' as const },
-      { id: '2', username: 'supervisor1', password: 'pass123', fullname: 'Jane Supervisor', role: 'supervisor' as const },
-      { id: '3', username: 'fuelman1', password: 'pass123', fullname: 'Mike Fuelman', role: 'fuelman' as const },
-      { id: '4', username: 'glpama1', password: 'pass123', fullname: 'Sarah PAMA', role: 'glpama' as const },
-      { id: '5', username: 'admin1', password: 'pass123', fullname: 'Admin User', role: 'admin' as const },
-    ];
-
-    const foundUser = mockUsers.find(u => u.username === username && u.password === password);
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      localStorage.setItem('userRole', userWithoutPassword.role);
-      setLoading(false);
-      return true;
+    try {
+      const response = await ApiService.login(username, password);
+      
+      if (response.success && response.data) {
+        setUser(response.data.user);
+        setToken(response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('userRole', response.data.user.role);
+        setLoading(false);
+        return true;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
     }
     
     setLoading(false);
@@ -59,12 +61,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     localStorage.removeItem('userRole');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, token }}>
       {children}
     </AuthContext.Provider>
   );
