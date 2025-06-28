@@ -1,85 +1,48 @@
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Truck, MapPin, Clock, Camera, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Truck, MapPin, Clock, Camera, FileText, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CreateTransportModal } from '../transport/CreateTransportModal';
-import { toast } from '@/hooks/use-toast';
-import ApiService from '../../services/api';
+import { PhotoUpload } from '../common/PhotoUpload';
+import { useTransports } from '@/hooks/useApiData';
 
 export const DriverDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [transports, setTransports] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    active: 0,
-    completed: 0,
-    totalKm: 0,
-    documents: 0
-  });
+  const { 
+    transports, 
+    isLoading, 
+    updateTransportStatus, 
+    deleteTransport 
+  } = useTransports();
 
-  const fetchTransports = async () => {
-    try {
-      setLoading(true);
-      const response = await ApiService.getTransports();
-      
-      if (response.success && response.data) {
-        setTransports(response.data);
-        
-        // Calculate stats
-        const activeCount = response.data.filter((t: any) => 
-          ['loading', 'enroute', 'arrived'].includes(t.status)
-        ).length;
-        
-        const completedCount = response.data.filter((t: any) => 
-          t.status === 'completed'
-        ).length;
-
-        setStats({
-          active: activeCount,
-          completed: completedCount,
-          totalKm: 3200, // This would come from actual calculation
-          documents: 12 // This would come from documents API
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch transports",
-        variant: "destructive",
-      });
-      console.error('Fetch transports error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTransports();
-  }, []);
-
-  const handleTransportCreated = () => {
-    fetchTransports(); // Refresh data after creating new transport
+  const stats = {
+    active: transports.filter((t: any) => 
+      ['loading', 'enroute', 'arrived'].includes(t.status)
+    ).length,
+    completed: transports.filter((t: any) => 
+      t.status === 'completed'
+    ).length,
+    totalKm: 3200, // This would come from actual calculation
+    documents: 12 // This would come from documents API
   };
 
   const handleUpdateStatus = async (transportId: string, newStatus: string) => {
     try {
-      const response = await ApiService.updateTransportStatus(transportId, newStatus);
-      
-      if (response.success) {
-        toast({
-          title: "Status Updated",
-          description: `Transport status updated to ${newStatus}`,
-        });
-        fetchTransports(); // Refresh data
-      }
+      await updateTransportStatus({ id: transportId, status: newStatus });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update transport status",
-        variant: "destructive",
-      });
+      console.error('Failed to update status:', error);
+    }
+  };
+
+  const handleDeleteTransport = async (transportId: string) => {
+    if (confirm('Are you sure you want to delete this transport?')) {
+      try {
+        await deleteTransport(transportId);
+      } catch (error) {
+        console.error('Failed to delete transport:', error);
+      }
     }
   };
 
@@ -103,7 +66,7 @@ export const DriverDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="animate-pulse">
@@ -222,15 +185,27 @@ export const DriverDashboard = () => {
                         {getStatusText(transport.status)}
                       </Badge>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      View Details
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button variant="ghost" size="sm">
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteTransport(transport.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-slate-600">Unit Number</p>
-                      <p className="font-medium">{transport.unitNumber || 'N/A'}</p>
+                      <p className="font-medium">{transport.unitNumber || transport.unit_number || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Destination</p>
@@ -238,16 +213,18 @@ export const DriverDashboard = () => {
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Driver</p>
-                      <p className="font-medium">{transport.driverName || 'N/A'}</p>
+                      <p className="font-medium">{transport.driverName || transport.driver_name || 'N/A'}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between mt-4 pt-3 border-t">
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Camera className="w-4 h-4 mr-1" />
-                        Upload Photo
-                      </Button>
+                      <PhotoUpload
+                        transportId={transport.id}
+                        type="seal"
+                        className="flex-1"
+                      />
+                      
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -258,7 +235,8 @@ export const DriverDashboard = () => {
                       </Button>
                     </div>
                     <p className="text-sm text-slate-600">
-                      Started: {transport.startTime ? new Date(transport.startTime).toLocaleString() : 'N/A'}
+                      Started: {transport.startTime || transport.created_at ? 
+                        new Date(transport.startTime || transport.created_at).toLocaleString() : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -271,7 +249,6 @@ export const DriverDashboard = () => {
       <CreateTransportModal 
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
-        onTransportCreated={handleTransportCreated}
       />
     </div>
   );

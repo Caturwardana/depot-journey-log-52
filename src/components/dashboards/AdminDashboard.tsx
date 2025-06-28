@@ -1,11 +1,39 @@
 
-import React from 'react';
-import { Users, Settings, BarChart3, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Settings, BarChart3, AlertTriangle, Plus, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useUsers, useTransports } from '@/hooks/useApiData';
+import { UserManagementModal } from '../admin/UserManagementModal';
 
 export const AdminDashboard = () => {
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  
+  const { users, deleteUser, isLoading: usersLoading } = useUsers();
+  const { transports, isLoading: transportsLoading } = useTransports();
+
+  const handleAddUser = () => {
+    setSelectedUser(null);
+    setShowUserModal(true);
+  };
+
+  const handleEditUser = (user: any) => {
+    setSelectedUser(user);
+    setShowUserModal(true);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+      try {
+        await deleteUser(userId);
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+      }
+    }
+  };
+
   const systemAlerts = [
     {
       id: 1,
@@ -21,11 +49,20 @@ export const AdminDashboard = () => {
     }
   ];
 
-  const recentUsers = [
-    { id: 1, name: 'John Driver', role: 'driver', status: 'active', lastLogin: '2 hours ago' },
-    { id: 2, name: 'Jane Supervisor', role: 'supervisor', status: 'active', lastLogin: '30 minutes ago' },
-    { id: 3, name: 'Mike Fuelman', role: 'fuelman', status: 'inactive', lastLogin: '2 days ago' }
-  ];
+  if (usersLoading || transportsLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-slate-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-slate-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -34,8 +71,11 @@ export const AdminDashboard = () => {
           <h1 className="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
           <p className="text-slate-600">System administration and user management</p>
         </div>
-        <Button className="bg-orange-500 hover:bg-orange-600">
-          <Users className="w-4 h-4 mr-2" />
+        <Button 
+          className="bg-orange-500 hover:bg-orange-600"
+          onClick={handleAddUser}
+        >
+          <Plus className="w-4 h-4 mr-2" />
           Add User
         </Button>
       </div>
@@ -47,7 +87,7 @@ export const AdminDashboard = () => {
             <div className="flex items-center space-x-2">
               <Users className="w-8 h-8 text-blue-500" />
               <div>
-                <p className="text-2xl font-bold text-slate-800">24</p>
+                <p className="text-2xl font-bold text-slate-800">{users.length}</p>
                 <p className="text-sm text-slate-600">Active Users</p>
               </div>
             </div>
@@ -59,7 +99,7 @@ export const AdminDashboard = () => {
             <div className="flex items-center space-x-2">
               <BarChart3 className="w-8 h-8 text-green-500" />
               <div>
-                <p className="text-2xl font-bold text-slate-800">156</p>
+                <p className="text-2xl font-bold text-slate-800">{transports.length}</p>
                 <p className="text-sm text-slate-600">Total Transports</p>
               </div>
             </div>
@@ -120,48 +160,79 @@ export const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Users */}
+        {/* User Management */}
         <Card>
           <CardHeader>
             <CardTitle>User Management</CardTitle>
             <CardDescription>
-              Recent user activity and status
+              Manage system users and permissions
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentUsers.map((user) => (
-                <div 
-                  key={user.id}
-                  className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
+            {users.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No users found</p>
+                <Button 
+                  onClick={handleAddUser}
+                  className="mt-4 bg-orange-500 hover:bg-orange-600"
                 >
-                  <div>
-                    <p className="font-medium text-slate-800">{user.name}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        {user.role}
-                      </Badge>
-                      <Badge className={`text-xs ${
-                        user.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-slate-100 text-slate-800'
-                      }`}>
-                        {user.status}
-                      </Badge>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First User
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {users.slice(0, 5).map((user: any) => (
+                  <div 
+                    key={user.id}
+                    className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-800">{user.fullname || user.username}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {user.role}
+                        </Badge>
+                        <Badge className="text-xs bg-green-100 text-green-800">
+                          active
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500">{user.lastLogin}</p>
-                    <Button variant="ghost" size="sm" className="mt-1">
-                      Manage
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+                {users.length > 5 && (
+                  <Button variant="outline" className="w-full">
+                    View All Users ({users.length})
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <UserManagementModal
+        open={showUserModal}
+        onOpenChange={setShowUserModal}
+        user={selectedUser}
+      />
     </div>
   );
 };
