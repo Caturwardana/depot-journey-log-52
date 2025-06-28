@@ -57,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('token', authToken);
         localStorage.setItem('userRole', userData.role);
+        localStorage.setItem('user_id', userData.id); // ✅ Tambahan penting
         
         setLoading(false);
         return true;

@@ -1,4 +1,3 @@
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 interface ApiResponse<T> {
@@ -38,7 +37,7 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -50,14 +49,19 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       const data = await response.json();
-      
+
+      console.log(`[✔️ API SUCCESS] ${config.method || 'GET'} ${url}`);
+      console.log(`→ Response:`, data);
+
       if (!response.ok) {
+        console.warn(`[❌ API WARN] ${url} - Status: ${response.status}`);
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
-      
+
       return data;
     } catch (error) {
-      console.error('API Error:', error);
+      console.error(`[🔥 API ERROR] ${config.method || 'GET'} ${url}`);
+      console.error('→ Error:', error);
       throw error;
     }
   }
@@ -67,23 +71,28 @@ class ApiService {
     formData: FormData
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getFormDataHeaders(),
         body: formData,
       });
-      
+
       const data = await response.json();
-      
+
+      console.log(`[📤 UPLOAD SUCCESS] POST ${url}`);
+      console.log('→ Response:', data);
+
       if (!response.ok) {
+        console.warn(`[❌ UPLOAD WARN] ${url} - Status: ${response.status}`);
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
-      
+
       return data;
     } catch (error) {
-      console.error('Upload Error:', error);
+      console.error(`[🔥 UPLOAD ERROR] POST ${url}`);
+      console.error('→ Error:', error);
       throw error;
     }
   }

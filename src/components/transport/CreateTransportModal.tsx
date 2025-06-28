@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Camera, Upload, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,26 +19,69 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({
   onOpenChange, 
   onTransportCreated 
 }) => {
+  const [user, setUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     unitNumber: '',
-    driverName: '',
     destination: '',
-    notes: ''
+    notes: '',
+    fuelType: '', // Add fuelType
+    volume: '',
   });
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+useEffect(() => {
+  const userId = localStorage.getItem('user_id');
+  console.log('user_id from localStorage:', userId); // Debug
+
+  if (userId) {
+    ApiService.getUserById(userId).then((response) => {
+      console.log('Fetched user:', response); // Debug
+
+      if (response.success && response.data) {
+        setUser(response.data);
+      } else {
+        console.warn('Failed to fetch user or user not found');
+      }
+    }).catch((err) => {
+      console.error('Error fetching user:', err);
+    });
+  }
+}, []);
+
+
+const driverId = user?.id ?? ''; // atau || '' juga boleh
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission if user or user.id is not loaded
+    if (!user || !user.id) {
+      toast({
+        title: "User Not Loaded",
+        description: "Unable to get driver ID. Please refresh or re-login.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const transportData = {
-        ...formData,
-        status: 'loading',
-        startTime: new Date().toISOString(),
-        location: location ? `${location.lat},${location.lng}` : null
-      };
+        const transportData = {
+          unit_number: formData.unitNumber,
+          driver_id: user.id,
+          destination: formData.destination,
+          notes: formData.notes,
+          fuel_type: formData.fuelType,
+          volume: formData.volume,
+          status: 'pending', // Set status to 'pending' as required
+          startTime: new Date().toISOString(),
+          location: location ? `${location.lat},${location.lng}` : null
+        };
+
+      console.log("Submitting transportData:", transportData);
 
       const response = await ApiService.createTransport(transportData);
       
@@ -50,10 +92,9 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({
         });
 
         onOpenChange(false);
-        setFormData({ unitNumber: '', driverName: '', destination: '', notes: '' });
+        setFormData({ unitNumber: '', destination: '', notes: '', fuelType: '', volume: '' });
         setLocation(null);
         
-        // Notify parent component to refresh data
         if (onTransportCreated) {
           onTransportCreated();
         }
@@ -99,6 +140,17 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({
     }
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Handle the uploaded file here
+    if (file) {
+      toast({
+        title: "File Selected",
+        description: `Selected file: ${file.name}`,
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -120,18 +172,24 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({
               required
             />
           </div>
-          
+                    
           <div className="space-y-2">
-            <Label htmlFor="driverName">Driver Name</Label>
-            <Input
-              id="driverName"
-              placeholder="Enter driver name"
-              value={formData.driverName}
-              onChange={(e) => handleInputChange('driverName', e.target.value)}
+            <Label htmlFor="fuelType">Fuel Type</Label>
+            <select
+              id="fuelType"
+              className="form-select w-full border rounded px-3 py-2"
+              value={formData.fuelType}
+              onChange={(e) => handleInputChange('fuelType', e.target.value)}
               required
-            />
+            >
+              <option value="">-- Select Fuel Type --</option>
+              <option value="gasoline">Gasoline</option>
+              <option value="diesel">Diesel</option>
+              <option value="kerosene">Kerosene</option>
+            </select>
           </div>
-          
+
+
           <div className="space-y-2">
             <Label htmlFor="destination">Destination</Label>
             <Input
@@ -154,15 +212,34 @@ export const CreateTransportModal: React.FC<CreateTransportModalProps> = ({
             />
           </div>
           
+          <div className="space-y-2">
+            <Label htmlFor="volume">Volume (Liter)</Label>
+            <Input
+              id="volume"
+              type="number"
+              min="0"
+              placeholder="e.g., 5000"
+              value={formData.volume}
+              onChange={(e) => handleInputChange('volume', e.target.value)}
+              required
+            />
+          </div>
+          
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="outline" onClick={captureLocation}>
               <MapPin className="w-4 h-4 mr-2" />
               {location ? 'Location Captured' : 'GPS Location'}
             </Button>
-            <Button type="button" variant="outline">
-              <Camera className="w-4 h-4 mr-2" />
-              Take Photo
-            </Button>
+            <label style={{ cursor: "pointer" }} className="flex items-center justify-center p-2 border rounded-md">
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Photo
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+            </label>
           </div>
           
           <div className="flex space-x-2 pt-4">
