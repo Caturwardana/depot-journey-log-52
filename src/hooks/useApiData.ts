@@ -10,80 +10,119 @@ export const useTransports = () => {
   const transportsQuery = useQuery({
     queryKey: ['transports'],
     queryFn: async () => {
-      const response = await ApiService.getTransports();
-      return response.data || [];
+      try {
+        const response = await ApiService.getTransports();
+        console.log('Transports fetched:', response);
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching transports:', error);
+        throw error;
+      }
     },
+    retry: 2,
+    staleTime: 30000, // 30 seconds
   });
 
   const createTransportMutation = useMutation({
-    mutationFn: ApiService.createTransport,
-    onSuccess: () => {
+    mutationFn: async (transportData: any) => {
+      console.log('Creating transport with data:', transportData);
+      const response = await ApiService.createTransport(transportData);
+      return response;
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transports'] });
       toast({
         title: "Success",
         description: "Transport created successfully",
       });
+      console.log('Transport created successfully:', data);
     },
     onError: (error: any) => {
+      console.error('Create transport error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          "Failed to create transport";
       toast({
         title: "Error",
-        description: error?.message || "Failed to create transport",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
   const updateTransportMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => 
-      ApiService.updateTransport(id, data),
-    onSuccess: () => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      console.log('Updating transport:', id, data);
+      return await ApiService.updateTransport(id, data);
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transports'] });
       toast({
         title: "Success",
         description: "Transport updated successfully",
       });
+      console.log('Transport updated successfully:', data);
     },
     onError: (error: any) => {
+      console.error('Update transport error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          "Failed to update transport";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update transport",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
   const updateTransportStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => 
-      ApiService.updateTransportStatus(id, status),
-    onSuccess: () => {
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      console.log('Updating transport status:', id, status);
+      return await ApiService.updateTransportStatus(id, status);
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transports'] });
       toast({
         title: "Success",
         description: "Transport status updated successfully",
       });
+      console.log('Transport status updated successfully:', data);
     },
     onError: (error: any) => {
+      console.error('Update transport status error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          "Failed to update transport status";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update transport status",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
   const deleteTransportMutation = useMutation({
-    mutationFn: ApiService.deleteTransport,
-    onSuccess: () => {
+    mutationFn: async (transportId: string) => {
+      console.log('Deleting transport:', transportId);
+      return await ApiService.deleteTransport(transportId);
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transports'] });
       toast({
         title: "Success",
         description: "Transport deleted successfully",
       });
+      console.log('Transport deleted successfully:', data);
     },
     onError: (error: any) => {
+      console.error('Delete transport error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          "Failed to delete transport";
       toast({
         title: "Error",
-        description: error?.message || "Failed to delete transport",
+        description: errorMessage,
         variant: "destructive",
       });
     },

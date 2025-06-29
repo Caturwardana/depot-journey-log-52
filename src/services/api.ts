@@ -47,22 +47,45 @@ class ApiService {
     };
 
     try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+      console.log(`[API REQUEST] ${config.method || 'GET'} ${url}`, {
+        body: config.body,
+        headers: config.headers
+      });
 
-      console.log(`[✔️ API SUCCESS] ${config.method || 'GET'} ${url}`);
-      console.log(`→ Response:`, data);
+      const response = await fetch(url, config);
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        // Handle non-JSON responses
+        data = { success: false, message: 'Invalid response format' };
+      }
+
+      console.log(`[API RESPONSE] ${config.method || 'GET'} ${url} - Status: ${response.status}`, data);
 
       if (!response.ok) {
-        console.warn(`[❌ API WARN] ${url} - Status: ${response.status}`);
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+        (error as any).response = { data, status: response.status };
+        throw error;
       }
 
       return data;
-    } catch (error) {
-      console.error(`[🔥 API ERROR] ${config.method || 'GET'} ${url}`);
-      console.error('→ Error:', error);
-      throw error;
+    } catch (error: any) {
+      console.error(`[API ERROR] ${config.method || 'GET'} ${url}`, error);
+      
+      // Enhance error with response data if available
+      if (error.response) {
+        throw error;
+      }
+      
+      // Network or other errors
+      const enhancedError = new Error(error.message || 'Network error occurred');
+      (enhancedError as any).response = { 
+        data: { message: error.message || 'Network error occurred' },
+        status: 0 
+      };
+      throw enhancedError;
     }
   }
 
@@ -133,20 +156,35 @@ class ApiService {
     });
   }
 
-  // Transport Operations
+  // Transport Operations - Fixed payload structure
+  static async createTransport(transportData: any) {
+    // Ensure payload matches backend schema
+    const payload = {
+      unit_number: transportData.unit_number,
+      driver_id: transportData.driver_id,
+      depot_id: transportData.depot_id || null,
+      terminal_id: transportData.terminal_id || null,
+      destination: transportData.destination,
+      fuel_type: transportData.fuel_type,
+      volume: transportData.volume,
+      status: transportData.status || 'pending',
+      notes: transportData.notes || null,
+      latitude: transportData.latitude || null,
+      longitude: transportData.longitude || null
+    };
+
+    return this.request<any>('/transports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   static async getTransports() {
     return this.request<any[]>('/transports');
   }
 
   static async getTransport(id: string) {
     return this.request<any>(`/transports/${id}`);
-  }
-
-  static async createTransport(transportData: any) {
-    return this.request<any>('/transports', {
-      method: 'POST',
-      body: JSON.stringify(transportData),
-    });
   }
 
   static async updateTransport(id: string, transportData: any) {
